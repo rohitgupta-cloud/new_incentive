@@ -1,7 +1,7 @@
 import { useAuth } from '../auth/AuthContext'
 
 export default function LoginScreen() {
-  const { signIn, status, error } = useAuth()
+  const { signIn, status, statusMessage, error } = useAuth()
   const busy = status === 'signing_in'
 
   return (
@@ -10,7 +10,7 @@ export default function LoginScreen() {
         <h1>ShopDeck Incentive Portal</h1>
         <p className="muted">Sign in with your ShopDeck or Blitzscale Google account.</p>
         <button className="google-btn" onClick={signIn} disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in with Google'}
+          {busy ? statusMessage || 'Signing in…' : 'Sign in with Google'}
         </button>
         {error && <p className="error-text">{error}</p>}
         <p className="fine-print">
