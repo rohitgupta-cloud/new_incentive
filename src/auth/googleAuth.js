@@ -56,9 +56,15 @@ async function getTokenClient(onToken) {
   return tokenClient
 }
 
-// Opens the Google consent popup and resolves with { access_token, expires_in, ... }
-// or rejects if the user closes the popup / denies consent.
-export async function requestAccessToken() {
+// Opens the Google consent popup and resolves with { access_token, expires_in,
+// scope, ... } or rejects if the user closes the popup / denies consent.
+//
+// forceConsent=true adds `prompt: 'consent'`, which forces Google to show the
+// consent screen again instead of silently reusing a cached grant. We need
+// this because GIS can hand back a cached token that's missing a scope we
+// just added (e.g. right after enabling Sheets access) — see hasSheetsScope
+// below and how AuthContext uses it to retry once before giving up.
+export async function requestAccessToken(forceConsent = false) {
   return new Promise((resolve, reject) => {
     getTokenClient((response) => {
       if (response.error) {
@@ -67,9 +73,18 @@ export async function requestAccessToken() {
         resolve(response)
       }
     })
-      .then((client) => client.requestAccessToken({ prompt: '' }))
+      .then((client) => client.requestAccessToken({ prompt: forceConsent ? 'consent' : '' }))
       .catch(reject)
   })
+}
+
+// The token response's `scope` field is a space-separated list of every
+// scope Google actually granted — not necessarily everything we asked for.
+// Checking it (rather than assuming success means "got everything") is what
+// catches a stale cached grant before we waste a round trip hitting the
+// Sheets API and getting a 403 back.
+export function hasSheetsScope(scope) {
+  return /spreadsheets/.test(String(scope || ''))
 }
 
 export async function fetchUserInfo(accessToken) {
